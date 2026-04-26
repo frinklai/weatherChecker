@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>世界城市旅遊天氣月曆｜版面最佳化版</title>
+  <style>
+    :root{
+      --bg:#f6f8fc; --card:#fff; --ink:#182230; --muted:#667085; --line:#e6e9f0;
+      --accent:#2563eb; --ok:#047857; --warn:#b45309; --bad:#b91c1c;
+      --shadow:0 10px 30px rgba(16,24,40,.08); --radius:18px;
+      --risk-dry:#ecfdf5; --risk-light:#fffbeb; --risk-rain:#fff7ed; --risk-heavy:#fef2f2;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;
+      background:linear-gradient(180deg,#eef4ff 0%,var(--bg) 260px);
+      color:var(--ink);
+    }
+    header,main{max-width:1340px;margin:0 auto;padding-left:18px;padding-right:18px}
+    header{padding-top:34px;padding-bottom:10px}
+    h1{margin:0 0 10px;font-size:clamp(28px,4vw,42px);line-height:1.15;letter-spacing:-.02em}
+    .subtitle{color:var(--muted);max-width:1160px;line-height:1.7;font-size:15px}
+    .panel{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin:16px 0}
+    details.panel{padding:0;overflow:hidden}
+    details.panel > summary{
+      cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:16px 18px;font-size:18px;font-weight:900;letter-spacing:-.01em;color:var(--ink);
+    }
+    details.panel > summary::-webkit-details-marker{display:none}
+    details.panel > summary::after{
+      content:"收合 ▲";font-size:12px;font-weight:800;color:#475467;background:#f8fafc;border:1px solid #d0d5dd;border-radius:999px;padding:4px 9px;white-space:nowrap;
+    }
+    details.panel:not([open]) > summary::after{content:"展開 ▼"}
+    details.panel[open] > summary{border-bottom:1px solid var(--line)}
+    details.panel:not([open]) > summary{border-bottom:none}
+    .panel-content{padding:18px}
+    .city-controls{display:grid;grid-template-columns:.85fr .95fr 1.25fr;gap:12px;align-items:end;margin-bottom:12px}
+    .controls{display:grid;grid-template-columns:.74fr .74fr .95fr .95fr .85fr .95fr auto auto;gap:12px;align-items:end}
+    label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}
+    select,button,input[type="date"],input[type="text"],.resolved-city{
+      width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px 12px;font-size:14px;background:#fff;color:var(--ink);min-height:43px
+    }
+    .resolved-city{background:#f8fafc;line-height:1.35}
+    .resolved-city b{display:block}
+    .resolved-city span{color:var(--muted);font-size:12px}
+    button{cursor:pointer;border:none;min-width:128px;color:#fff;background:var(--accent);font-weight:800}
+    button.secondary{color:#344054;background:#fff;border:1px solid #d0d5dd}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .status{margin-top:12px;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:#f8fafc;color:var(--muted);font-size:13px;line-height:1.7;white-space:pre-line}
+    .status.ok{background:#ecfdf5;border-color:#bbf7d0;color:var(--ok)}
+    .status.warn{background:#fffbeb;border-color:#fde68a;color:var(--warn)}
+    .status.bad{background:#fef2f2;border-color:#fecaca;color:var(--bad)}
+    .api-url{
+      margin-top:10px;padding:9px 11px;border-radius:10px;border:1px dashed #cbd5e1;background:#f8fafc;color:#475467;
+      font-size:12px;line-height:1.5;word-break:break-all;display:none;
+    }
+    .city-results{display:none;margin-top:10px;grid-template-columns:1fr auto;gap:12px;align-items:end}
+    .city-results.show{display:grid}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+    .metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px}
+    .metric .k{font-size:12px;color:var(--muted);margin-bottom:8px}
+    .metric .v{font-size:24px;font-weight:800;letter-spacing:-.02em}
+    .metric .s{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5}
+    .legend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5}
+    .legend .sw{display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:6px;vertical-align:-1px}
+    .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .tab{
+      padding:8px 11px;border-radius:999px;border:1px solid #d0d5dd;background:#fff;color:#344054;
+      cursor:pointer;font-weight:800;font-size:13px;
+    }
+    .tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    .year-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:14px}
+    .year-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;transition:.15s}
+    .year-card:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(16,24,40,.08)}
+    .year-card.active{outline:2px solid rgba(37,99,235,.28)}
+    .year-card h3{margin:0 0 8px;font-size:20px}
+    .year-card .line{font-size:12px;color:#475467;line-height:1.7}
+    .calendar-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .year-block{margin:16px 0 24px}
+    .year-block-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+    .year-block-title h2{margin:0;font-size:24px;letter-spacing:-.01em}
+    .year-block-title .hint{text-align:right}
+    .month-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .month-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .month-head h3{margin:0;font-size:20px;letter-spacing:-.01em}
+    .month-sub{color:var(--muted);font-size:12px;text-align:right;line-height:1.45}
+    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);background:#f8fafc;border-bottom:1px solid var(--line)}
+    .weekday{padding:9px 6px;text-align:center;font-size:12px;font-weight:700;color:#475467}
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr)}
+    .day-cell{min-height:134px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px;position:relative;background:#fff;transition:transform .14s ease,box-shadow .14s ease}
+    .day-cell:nth-child(7n){border-right:none}
+    .day-cell.empty{background:#fafafa;color:#c0c7d4}
+    .day-cell.active{cursor:pointer}
+    .day-cell.active:hover{transform:translateY(-1px);box-shadow:inset 0 0 0 1px rgba(37,99,235,.18);z-index:1}
+    .risk-dry{background:var(--risk-dry)}
+    .risk-light{background:var(--risk-light)}
+    .risk-rain{background:var(--risk-rain)}
+    .risk-heavy{background:var(--risk-heavy)}
+    .day-top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}
+    .day-num{font-size:18px;font-weight:800;letter-spacing:-.02em}
+    .emoji{font-size:18px}
+    .mini{font-size:11px;line-height:1.5;color:#344054}
+    .mini .muted{color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;justify-content:center;min-width:44px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.01em;margin-top:4px}
+    .pill.dry{background:#d1fae5;color:#065f46}.pill.light{background:#fef3c7;color:#92400e}.pill.rain{background:#fed7aa;color:#9a3412}.pill.heavy{background:#fee2e2;color:#991b1b}
+    .section-title,.chart-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .section-title h2{margin:0;font-size:22px;letter-spacing:-.01em}
+    .chart-head h3{margin:0;font-size:18px;letter-spacing:-.01em}
+    .hint{font-size:12px;color:var(--muted);line-height:1.6;text-align:right}
+    .charts{display:grid;grid-template-columns:1fr;gap:16px}
+    .chart-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+    canvas{width:100%;height:320px;display:block}
+    .heatmap-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff;padding:12px}
+    .heatmap{display:grid;gap:4px;min-width:860px}
+    .heat-row{display:grid;grid-template-columns:64px repeat(var(--cols), minmax(24px,1fr));gap:4px;align-items:center}
+    .heat-label{font-size:12px;font-weight:800;color:#475467;text-align:right;padding-right:6px}
+    .heat-cell{height:26px;border-radius:6px;border:1px solid rgba(0,0,0,.04);font-size:10px;display:flex;align-items:center;justify-content:center;color:#344054}
+    .heat-head{font-size:10px;color:#667085;text-align:center;transform:rotate(-35deg);height:32px;display:flex;align-items:flex-end;justify-content:center}
+    .table-wrap{max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:10px 11px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:right}
+    th{position:sticky;top:0;z-index:1;background:#f8fafc;color:#475467;font-weight:800}
+    th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:last-child,td:last-child{text-align:left}
+    .row-dry{background:#f8fffb}.row-light{background:#fffcf5}.row-rain{background:#fff8f1}.row-heavy{background:#fff5f5}
+    .note{color:var(--muted);font-size:13px;line-height:1.75}
+    @media(max-width:1180px){.city-controls,.controls{grid-template-columns:1fr 1fr 1fr}.calendar-grid{grid-template-columns:1fr}.year-summary-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:760px){.cards{grid-template-columns:1fr 1fr}.city-controls,.controls{grid-template-columns:1fr 1fr}.year-summary-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:560px){.cards,.city-controls,.controls,.year-summary-grid{grid-template-columns:1fr}.city-results.show{grid-template-columns:1fr}.day-cell{min-height:126px}.weekday{font-size:11px}.mini{font-size:10px}}
+  
+
+    /* ===== Layout optimization ===== */
+    header{max-width:1500px;padding-top:22px;padding-bottom:6px}
+    header h1{font-size:clamp(24px,3vw,36px)}
+    header .subtitle{font-size:14px;max-width:1280px}
+    main.app-shell{
+      max-width:1500px;
+      display:grid;
+      grid-template-columns:minmax(340px,390px) minmax(0,1fr);
+      gap:18px;
+      align-items:start;
+    }
+    .sticky-sidebar{
+      position:sticky;
+      top:10px;
+      max-height:calc(100vh - 20px);
+      overflow:auto;
+      padding-right:2px;
+      scrollbar-width:thin;
+    }
+    .sticky-sidebar .panel{margin:0}
+    .sticky-sidebar details.panel > summary{font-size:16px;padding:13px 14px}
+    .sticky-sidebar .panel-content{padding:14px}
+    .sticky-sidebar .city-controls,
+    .sticky-sidebar .controls{grid-template-columns:1fr 1fr;gap:10px}
+    .sticky-sidebar .city-controls > div:nth-child(3),
+    .sticky-sidebar #cityResults.show,
+    .sticky-sidebar .status,
+    .sticky-sidebar .api-url,
+    .sticky-sidebar .legend{grid-column:1/-1}
+    .sticky-sidebar #cityResults.show{display:grid;grid-template-columns:1fr;gap:10px}
+    .sticky-sidebar .cards{grid-template-columns:1fr 1fr;gap:10px}
+    .sticky-sidebar .metric{padding:11px;border-radius:14px}
+    .sticky-sidebar .metric .v{font-size:19px;line-height:1.1}
+    .sticky-sidebar .metric .k,
+    .sticky-sidebar .metric .s{font-size:11px}
+    .sticky-sidebar .legend{gap:6px 10px;font-size:11px}
+    .sticky-sidebar .status{font-size:12px;max-height:120px;overflow:auto}
+    .sticky-sidebar .api-url{max-height:74px;overflow:auto;font-size:11px}
+    .content-area{min-width:0}
+    .quick-nav{
+      position:sticky;
+      top:0;
+      z-index:25;
+      margin:0 0 12px;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(246,248,252,.94);
+      backdrop-filter:blur(10px);
+      box-shadow:0 8px 22px rgba(16,24,40,.06);
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+    }
+    .quick-nav a{
+      text-decoration:none;
+      color:#344054;
+      background:#fff;
+      border:1px solid #d0d5dd;
+      border-radius:999px;
+      padding:8px 11px;
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+    .quick-nav a.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+    .content-area > details.panel{margin:0 0 14px}
+    .content-area details.panel > summary{padding:14px 16px;font-size:17px}
+    .content-area .panel-content{padding:14px}
+    .section-title{margin-bottom:8px}
+    .year-summary-grid{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+    .year-card{padding:12px;border-radius:14px}
+    .year-card h3{font-size:18px;margin-bottom:6px}
+    .heatmap-wrap{max-height:420px}
+    .charts{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .charts .chart-card:nth-child(2){grid-column:1/-1}
+    canvas{height:250px}
+    .chart-card{padding:13px}
+    .chart-head h3{font-size:16px}
+    .calendar-grid{gap:12px}
+    .month-card{box-shadow:0 8px 22px rgba(16,24,40,.06)}
+    .month-head{padding:11px 13px}
+    .day-cell{min-height:112px;padding:7px}
+    .mini{font-size:10.5px}
+    .table-wrap{max-height:520px}
+    @media(max-width:1180px){
+      main.app-shell{display:block;max-width:1340px}
+      .sticky-sidebar{position:static;max-height:none;padding-right:0;margin-bottom:12px}
+      .quick-nav{top:0}
+      .charts{grid-template-columns:1fr}
+      .charts .chart-card:nth-child(2){grid-column:auto}
+      canvas{height:300px}
+    }
+    @media(max-width:760px){
+      .quick-nav{overflow:auto;flex-wrap:nowrap}
+      .quick-nav a{flex:0 0 auto}
+      .sticky-sidebar .city-controls,
+      .sticky-sidebar .controls{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:560px){
+      .sticky-sidebar .city-controls,
+      .sticky-sidebar .controls,
+      .sticky-sidebar .cards{grid-template-columns:1fr}
+      .day-cell{min-height:118px}
+    }
+
+    /* ===== Sidebar drawer behavior: use existing 操作區塊 summary as the toggle ===== */
+    main.app-shell{
+      transition:grid-template-columns .22s ease;
+    }
+    #operationSummary{
+      user-select:none;
+    }
+    .sticky-sidebar details.panel > summary::after{
+      content:"收起 ◀";
+    }
+    main.app-shell.sidebar-collapsed{
+      grid-template-columns:58px minmax(0,1fr);
+    }
+    main.app-shell.sidebar-collapsed .sticky-sidebar{
+      overflow:visible;
+      max-height:calc(100vh - 20px);
+      padding-right:0;
+    }
+    main.app-shell.sidebar-collapsed #operationPanel{
+      width:46px;
+      min-width:46px;
+      margin:0 auto;
+      padding:0;
+      overflow:visible;
+      background:transparent;
+      border:none;
+      box-shadow:none;
+    }
+    main.app-shell.sidebar-collapsed #operationPanel[open] .panel-content{
+      display:none;
+    }
+    main.app-shell.sidebar-collapsed #operationSummary{
+      width:46px;
+      min-width:46px;
+      height:168px;
+      padding:12px 8px;
+      writing-mode:vertical-rl;
+      text-orientation:mixed;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:18px;
+      background:#182230;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 10px 24px rgba(16,24,40,.14);
+      white-space:nowrap;
+    }
+    main.app-shell.sidebar-collapsed #operationSummary::after{
+      content:"展開 ▶";
+      display:inline;
+      margin-top:10px;
+      padding:0;
+      border:none;
+      background:transparent;
+      color:rgba(255,255,255,.88);
+      font-size:12px;
+      writing-mode:vertical-rl;
+    }
+    main.app-shell.sidebar-collapsed details.panel > summary{
+      border-bottom:none;
+    }
+    main.app-shell.sidebar-collapsed .content-area{
+      min-width:0;
+    }
+    @media(max-width:1180px){
+      main.app-shell.sidebar-collapsed{
+        grid-template-columns:1fr;
+      }
+      main.app-shell.sidebar-collapsed #operationPanel{
+        width:auto;
+        min-width:0;
+        margin:0;
+        background:rgba(255,255,255,.94);
+        border:1px solid var(--line);
+        box-shadow:var(--shadow);
+      }
+      main.app-shell.sidebar-collapsed #operationPanel[open] .panel-content{
+        display:block;
+      }
+      main.app-shell.sidebar-collapsed #operationSummary{
+        width:100%;
+        min-width:0;
+        height:auto;
+        writing-mode:horizontal-tb;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        border-radius:0;
+        background:transparent;
+        color:var(--ink);
+        border:none;
+        box-shadow:none;
+        padding:13px 14px;
+      }
+      main.app-shell.sidebar-collapsed #operationSummary::after{
+        content:"收起 ◀";
+        writing-mode:horizontal-tb;
+        margin-top:0;
+        color:#475467;
+        background:#f8fafc;
+        border:1px solid #d0d5dd;
+        border-radius:999px;
+        padding:4px 9px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+<header>
+  <h1>世界城市旅遊天氣月曆｜版面最佳化版</h1>
+  <div class="subtitle">
+    版面已改成「左側固定操作區 + 右側分析內容」：操作與關鍵摘要會固定在畫面旁邊，右側可快速切換年度總覽、熱力圖、月曆、圖表與明細。載入天氣時會自動完成國家 + 城市匹配，仍保留逐年實際資料、快取與 429 冷卻保護。
+  </div>
+</header>
+
+<main class="app-shell">
+  <aside class="sticky-sidebar" id="operationSidebar">
+  <details class="panel collapsible" id="operationPanel" open>
+    <summary id="operationSummary" role="button" aria-expanded="true">操作區塊</summary>
+    <div class="panel-content">
+    <div class="city-controls">
+      <div>
+        <label for="countryInput">國家 / 地區</label>
+        <input type="text" id="countryInput" value="韓國" placeholder="例如：韓國、南韓、Korea、JP、Taiwan、France">
+      </div>
+      <div>
+        <label for="cityInput">城市名稱</label>
+        <input type="text" id="cityInput" value="釜山" placeholder="例如：釜山、Busan、東京、Kyoto、Paris">
+      </div>
+      <div>
+        <label>目前對應城市</label>
+        <div class="resolved-city" id="resolvedCity">
+          <b>Busan, Busan, South Korea</b>
+          <span>KR｜35.1796, 129.0756｜Asia/Seoul</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="cityResults" class="city-results">
+      <div>
+        <label for="cityResultSelect">其他可能結果</label>
+        <select id="cityResultSelect"></select>
+      </div>
+      <div>
+        <button id="useSelectedCityBtn" class="secondary">使用選取城市</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div>
+        <label for="startYearSelect">起始年</label>
+        <select id="startYearSelect"></select>
+      </div>
+      <div>
+        <label for="endYearSelect">結束年</label>
+        <select id="endYearSelect"></select>
+      </div>
+      <div>
+        <label for="startDateInput">日期區間開始</label>
+        <input type="date" id="startDateInput" value="2026-06-15">
+      </div>
+      <div>
+        <label for="endDateInput">日期區間結束</label>
+        <input type="date" id="endDateInput" value="2026-07-15">
+      </div>
+      <div>
+        <label for="viewModeSelect">月曆顯示</label>
+        <select id="viewModeSelect">
+          <option value="selected">只看選定年份</option>
+          <option value="all">顯示所有年份</option>
+        </select>
+      </div>
+      <div>
+        <label for="chartYearSelect">選定年份</label>
+        <select id="chartYearSelect"></select>
+      </div>
+      <div>
+        <button id="loadBtn">載入天氣資料</button>
+      </div>
+      <div>
+        <button id="clearBtn" class="secondary">清除快取</button>
+      </div>
+    </div>
+
+    <div id="status" class="status">已預設對應 South Korea 的 Busan。輸入國家與城市後，按「載入天氣資料」會自動完成匹配。</div>
+    <div id="apiUrl" class="api-url"></div>
+
+    <div class="cards">
+      <div class="metric"><div class="k">目前區間</div><div class="v" id="mRange">--</div><div class="s" id="mRangeSub">--</div></div>
+      <div class="metric"><div class="k">雨最多年份</div><div class="v" id="mWettest">--</div><div class="s" id="mWettestSub">--</div></div>
+      <div class="metric"><div class="k">雨最少年份</div><div class="v" id="mDriest">--</div><div class="s" id="mDriestSub">--</div></div>
+      <div class="metric"><div class="k">選定年份狀態</div><div class="v" id="mSelectedYear">--</div><div class="s" id="mSelectedYearSub">--</div></div>
+    </div>
+
+    <div class="legend">
+      <span><span class="sw" style="background:#ecfdf5"></span>無雨 / 低影響：&lt; 1 mm</span>
+      <span><span class="sw" style="background:#fffbeb"></span>小雨：1–10 mm</span>
+      <span><span class="sw" style="background:#fff7ed"></span>明顯降雨：10–30 mm</span>
+      <span><span class="sw" style="background:#fef2f2"></span>大雨：≥ 30 mm</span>
+    </div>  </div>
+  </details>
+
+  </aside>
+
+  <section class="content-area">
+    <nav class="quick-nav" aria-label="快速跳轉">
+      <a class="primary" href="#sec-calendar">看月曆</a>
+      <a href="#sec-charts">看圖表</a>
+      <a href="#sec-heatmap">看熱力圖</a>
+      <a href="#sec-summary">年度總覽</a>
+      <a href="#sec-detail">明細表</a>
+      <a href="#sec-note">說明</a>
+    </nav>
+
+  <details id="sec-summary" class="panel collapsible" open>
+    <summary>年度總覽</summary>
+    <div class="panel-content">
+    <div class="section-title">
+      <h2>年度總覽</h2>
+      <div class="hint">點年度卡片可切換「選定年份」與下方每日圖表。</div>
+    </div>
+    <div id="yearSummaryGrid" class="year-summary-grid"></div>  </div>
+  </details>
+
+  <details id="sec-heatmap" class="panel collapsible" open>
+    <summary>年度 × 日期雨量熱力圖</summary>
+    <div class="panel-content">
+    <div class="section-title">
+      <h2>年度 × 日期雨量熱力圖</h2>
+      <div class="hint">每一列是一年，每一格是該日期的實際雨量。</div>
+    </div>
+    <div id="rainHeatmap" class="heatmap-wrap"></div>  </div>
+  </details>
+
+  <details id="sec-calendar" class="panel collapsible" open>
+    <summary>逐年實際月曆</summary>
+    <div class="panel-content" id="calendarSection"></div>
+  </details>
+
+  <details id="sec-charts" class="panel collapsible" open>
+    <summary>每日變化圖表</summary>
+    <div class="panel-content">
+    <div class="section-title">
+      <h2>每日變化圖表</h2>
+      <div class="hint">這裡顯示「選定年份」的每日實際變化，不是多年平均。</div>
+    </div>
+    <div class="charts">
+      <div class="chart-card"><div class="chart-head"><h3>選定年份：每日實際降雨量</h3><div class="hint" id="rainChartHint">--</div></div><canvas id="rainChart"></canvas></div>
+      <div class="chart-card"><div class="chart-head"><h3>各年度總雨量與雨日數比較</h3><div class="hint">用來比較每一年同日期區間的整體狀態</div></div><canvas id="yearCompareChart"></canvas></div>
+      <div class="chart-card"><div class="chart-head"><h3>選定年份：每日實際高低溫</h3><div class="hint" id="tempChartHint">--</div></div><canvas id="tempChart"></canvas></div>
+    </div>  </div>
+  </details>
+
+  <details id="sec-detail" class="panel collapsible">
+    <summary>逐年每日明細表</summary>
+    <div class="panel-content">
+    <div class="section-title">
+      <h2>逐年每日明細表</h2>
+      <div class="hint">不做平均；每一列都是某一年某一天的實際資料。</div>
+    </div>
+    <div class="table-wrap">
+      <table id="dailyTable">
+        <thead>
+          <tr>
+            <th>年份</th><th>日期</th><th>天氣</th><th>雨量 mm</th><th>最高溫 ℃</th><th>最低溫 ℃</th><th>旅遊判斷</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    </div>
+  </details>
+
+  <details id="sec-note" class="panel collapsible note">
+    <summary>說明與注意事項</summary>
+    <div class="panel-content">
+    <b>國家 + 城市自動對應邏輯：</b><br>
+    1. 先輸入國家 / 地區，再輸入城市；例如國家輸入「韓國 / 南韓 / Korea / KR」，城市輸入「釜山 / Busan」。<br>
+    2. 系統會先把常見中文城市別名轉成較穩定的英文查詢，例如 釜山→Busan、首爾→Seoul、東京→Tokyo、京都→Kyoto、台北→Taipei。<br>
+    3. Geocoding API 回傳候選結果後，會用國家欄位加權排序，避免把釜山誤配到中國或其他地點。<br>
+    4. 若城市仍有歧義，例如 Paris、Springfield、San José，可在「其他可能結果」下拉選單改選。<br>
+    5. 天氣資料會依「城市座標 + 時區 + 年份範圍」快取；換日期區間不會重新打 API。<br>
+    6. 遇到 429 時不會自動重試，會啟動本機冷卻，避免越按越被限流。
+    </div>
+  </details>
+  </section>
+</main>
+
+<script>
+const DEFAULT_CITY = {
+  id: 1838524,
+  name: "Busan",
+  country: "South Korea",
+  country_code: "KR",
+  admin1: "Busan",
+  latitude: 35.1796,
+  longitude: 129.0756,
+  timezone: "Asia/Seoul",
+  population: 3678555
+};
+
+const DATA_YEARS = Array.from({length:10}, (_,i)=>2016+i);
+const WEEKDAY_LABELS = ["一","二","三","四","五","六","日"];
+const MONTH_NAMES = ["","1 月","2 月","3 月","4 月","5 月","6 月","7 月","8 月","9 月","10 月","11 月","12 月"];
+const WEATHER_CACHE_PREFIX = "world_city_yearly_actual_weather_v2_";
+const GEOCODE_CACHE_PREFIX = "world_city_geocode_v2_";
+const WEATHER_COOLDOWN_KEY = "world_city_weather_429_cooldown_until";
+const GEOCODE_COOLDOWN_KEY = "world_city_geocode_429_cooldown_until";
+
+let currentCity = {...DEFAULT_CITY};
+let cityCandidates = [];
+let rawDaily = null;
+let selectedRows = [];
+let yearSummaries = [];
+let loadedKey = null;
+let lastResolvedInputKey = "";
+
+const $ = id => document.getElementById(id);
+
+function fmt(n,d=1){ if(n===null||n===undefined||Number.isNaN(n)) return "--"; return Number(n).toFixed(d); }
+function setStatus(msg,type=""){ const el=$("status"); el.className="status"+(type?" "+type:""); el.textContent=msg; }
+function weatherCategory(code){ if(code===0)return"晴"; if([1,2,3].includes(code))return"多雲"; if([45,48].includes(code))return"霧"; if([51,53,55,56,57].includes(code))return"毛毛雨"; if([61,63,65,66,67,80,81,82].includes(code))return"雨"; if([71,73,75,77,85,86].includes(code))return"雪"; if([95,96,99].includes(code))return"雷雨"; return"其他"; }
+function weatherEmoji(cat){ return {"晴":"☀️","多雲":"⛅","霧":"🌫️","毛毛雨":"🌦️","雨":"🌧️","雷雨":"⛈️","雪":"❄️","其他":"🌤️"}[cat] || "🌤️"; }
+
+function actualRainInfo(rain){
+  if(rain >= 30) return {short:"大雨", cls:"risk-heavy", pill:"heavy", row:"row-heavy", text:"大雨：建議改室內或保留替代方案"};
+  if(rain >= 10) return {short:"有雨", cls:"risk-rain", pill:"rain", row:"row-rain", text:"明顯降雨：戶外行程需保留彈性"};
+  if(rain >= 1) return {short:"小雨", cls:"risk-light", pill:"light", row:"row-light", text:"小雨：建議準備雨備"};
+  return {short:"無雨", cls:"risk-dry", pill:"dry", row:"row-dry", text:"低影響：可優先排戶外"};
+}
+
+function selectedYears(){
+  let sy=Number($("startYearSelect").value), ey=Number($("endYearSelect").value);
+  if(sy>ey)[sy,ey]=[ey,sy];
+  return DATA_YEARS.filter(y=>y>=sy&&y<=ey);
+}
+function selectedYearRangeKey(){ const ys=selectedYears(); return `${ys[0]}_${ys[ys.length-1]}`; }
+function cityKey(city=currentCity){
+  const id = city.id ? `id${city.id}` : `${city.name}_${city.latitude}_${city.longitude}`;
+  return String(id).replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+function dataKey(){ return `${cityKey(currentCity)}_${selectedYearRangeKey()}`; }
+function weatherCacheKey(){ return `${WEATHER_CACHE_PREFIX}${dataKey()}`; }
+function geocodeCacheKey(query){ return `${GEOCODE_CACHE_PREFIX}${normalizeQuery(query)}`; }
+
+function normalizeQuery(text){
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af-]/g, "");
+}
+
+function currentInputKey(){
+  return `${normalizeQuery($("countryInput")?.value || "")}|${normalizeQuery($("cityInput")?.value || "")}`;
+}
+
+const COUNTRY_ALIAS_GROUPS = [
+  { code:"KR", aliases:["kr","korea","south korea","republic of korea","韓國","南韓","大韓民國","대한민국","한국"] },
+  { code:"KP", aliases:["kp","north korea","北韓","朝鮮","朝鲜","dprk"] },
+  { code:"JP", aliases:["jp","japan","日本","日本國","日本国","にほん","nippon"] },
+  { code:"TW", aliases:["tw","taiwan","台灣","台湾","中華民國","中华民国","roc"] },
+  { code:"CN", aliases:["cn","china","中國","中国","mainland china","prc","中華人民共和國","中华人民共和国"] },
+  { code:"HK", aliases:["hk","hong kong","香港"] },
+  { code:"MO", aliases:["mo","macau","macao","澳門","澳门"] },
+  { code:"US", aliases:["us","usa","united states","america","美國","美国","美利堅","美利坚"] },
+  { code:"GB", aliases:["gb","uk","united kingdom","britain","england","英國","英国"] },
+  { code:"FR", aliases:["fr","france","法國","法国"] },
+  { code:"DE", aliases:["de","germany","德國","德国"] },
+  { code:"IT", aliases:["it","italy","義大利","意大利"] },
+  { code:"ES", aliases:["es","spain","西班牙"] },
+  { code:"CA", aliases:["ca","canada","加拿大"] },
+  { code:"AU", aliases:["au","australia","澳洲","澳大利亞","澳大利亚"] },
+  { code:"TH", aliases:["th","thailand","泰國","泰国"] },
+  { code:"VN", aliases:["vn","vietnam","越南"] },
+  { code:"SG", aliases:["sg","singapore","新加坡"] },
+  { code:"MY", aliases:["my","malaysia","馬來西亞","马来西亚"] },
+  { code:"ID", aliases:["id","indonesia","印尼","印度尼西亞","印度尼西亚"] }
+];
+
+const COUNTRY_ALIAS_MAP = (() => {
+  const map = {};
+  COUNTRY_ALIAS_GROUPS.forEach(group => {
+    group.aliases.forEach(alias => {
+      map[normalizeQuery(alias)] = group.code;
+    });
+  });
+  return map;
+})();
+
+const COUNTRY_ALIAS_LIST = (() => {
+  const list = [];
+  COUNTRY_ALIAS_GROUPS.forEach(group => {
+    group.aliases.forEach(alias => {
+      list.push({ alias, normalized: normalizeQuery(alias), code: group.code });
+    });
+  });
+  return list.sort((a,b) => b.alias.length - a.alias.length);
+})();
+
+const CITY_ALIAS_MAP = (() => {
+  const map = {};
+  function add(countryCode, aliases, query){
+    aliases.forEach(alias => {
+      map[normalizeQuery(alias)] = { query, preferredCountryCode: countryCode };
+    });
+  }
+  add("KR", ["釜山","釜山市","부산","부산광역시"], "Busan");
+  add("KR", ["首爾","首尔","서울","서울특별시"], "Seoul");
+  add("KR", ["濟州","济州","濟州市","제주","제주시"], "Jeju");
+  add("KR", ["大邱","대구"], "Daegu");
+  add("KR", ["仁川","인천"], "Incheon");
+  add("KR", ["慶州","庆州","경주"], "Gyeongju");
+  add("JP", ["東京","东京","とうきょう"], "Tokyo");
+  add("JP", ["京都","きょうと"], "Kyoto");
+  add("JP", ["大阪","おおさか"], "Osaka");
+  add("JP", ["福岡","福冈","ふくおか"], "Fukuoka");
+  add("JP", ["札幌","さっぽろ"], "Sapporo");
+  add("TW", ["台北","臺北","台北市","臺北市"], "Taipei");
+  add("TW", ["高雄","高雄市"], "Kaohsiung");
+  add("TW", ["台中","臺中","台中市","臺中市"], "Taichung");
+  add("TW", ["台南","臺南","台南市","臺南市"], "Tainan");
+  return map;
+})();
+
+function lookupCountryCode(rawCountry){
+  const raw = String(rawCountry || "").trim();
+  if(!raw) return "";
+  if(/^[a-zA-Z]{2}$/.test(raw)) return raw.toUpperCase();
+  return COUNTRY_ALIAS_MAP[normalizeQuery(raw)] || "";
+}
+
+function countryInfoFromInput(rawCountry){
+  const raw = String(rawCountry || "").trim();
+  return {
+    raw,
+    code: lookupCountryCode(raw),
+    normalized: normalizeQuery(raw)
+  };
+}
+
+function escapeRegExp(text){
+  return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractCountryFromCombinedCityInput(rawCity){
+  let city = String(rawCity || "").trim();
+  let info = countryInfoFromInput("");
+  const normalized = normalizeQuery(city);
+  for(const entry of COUNTRY_ALIAS_LIST){
+    if(!entry.normalized) continue;
+    if(normalized === entry.normalized || normalized.startsWith(entry.normalized + "_") || normalized.endsWith("_" + entry.normalized) || normalized.includes(entry.normalized)){
+      info = { raw: entry.alias, code: entry.code, normalized: entry.normalized };
+      const pattern = new RegExp(escapeRegExp(entry.alias), "ig");
+      city = city.replace(pattern, " ").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
+      break;
+    }
+  }
+  return { city, countryInfo: info };
+}
+
+function resolveCitySearchInput(rawCountry, rawCity){
+  let countryInfo = countryInfoFromInput(rawCountry);
+  let city = String(rawCity || "").trim();
+
+  if(!countryInfo.raw && city){
+    const extracted = extractCountryFromCombinedCityInput(city);
+    if(extracted.countryInfo.code){
+      countryInfo = extracted.countryInfo;
+      city = extracted.city;
+    }
+  }
+
+  const cityAlias = CITY_ALIAS_MAP[normalizeQuery(city)];
+  const query = cityAlias ? cityAlias.query : city;
+
+  return {
+    originalCity: rawCity,
+    cleanedCity: city,
+    query,
+    countryInfo,
+    aliasInfo: cityAlias || {}
+  };
+}
+
+function countryMatchesCandidate(candidate, countryInfo){
+  if(!countryInfo || !countryInfo.raw) return true;
+  if(countryInfo.code && String(candidate.country_code || "").toUpperCase() === countryInfo.code) return true;
+
+  const target = countryInfo.normalized;
+  if(!target) return true;
+
+  const country = normalizeQuery(candidate.country || "");
+  const admin1 = normalizeQuery(candidate.admin1 || "");
+  return country === target || country.includes(target) || target.includes(country) || admin1 === target || admin1.includes(target);
+}
+
+function cityLabel(city){
+  const parts = [city.name, city.admin1, city.country].filter(Boolean);
+  return parts.join(", ");
+}
+
+function cityMeta(city){
+  return `${city.country_code || "--"}｜${fmt(city.latitude,4)}, ${fmt(city.longitude,4)}｜${city.timezone || "auto"}${city.population ? "｜人口 " + Number(city.population).toLocaleString() : ""}`;
+}
+
+function renderResolvedCity(){
+  $("resolvedCity").innerHTML = `<b>${cityLabel(currentCity)}</b><span>${cityMeta(currentCity)}</span>`;
+}
+
+function mmddFromDateInput(id){
+  const v=$(id).value;
+  return (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v.slice(5) : null;
+}
+
+function makeMMDDSequenceForYear(startMMDD,endMMDD,year){
+  const sm=Number(startMMDD.slice(0,2)), sd=Number(startMMDD.slice(3,5));
+  const em=Number(endMMDD.slice(0,2)), ed=Number(endMMDD.slice(3,5));
+  let start=new Date(year,sm-1,sd);
+  let end=new Date(year,em-1,ed);
+  if(end<start) end=new Date(year+1,em-1,ed);
+  const seq=[], d=new Date(start);
+  while(d<=end){
+    const yyyy=d.getFullYear();
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    seq.push({
+      year,
+      actualYear:yyyy,
+      iso:`${yyyy}-${mm}-${dd}`,
+      mmdd:`${mm}-${dd}`,
+      label:`${mm}/${dd}`,
+      month:Number(mm),
+      day:Number(dd)
+    });
+    d.setDate(d.getDate()+1);
+  }
+  return seq;
+}
+
+function apiUrlForCurrentSelection(){
+  const ys=selectedYears();
+  const dailyVars="weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum";
+  const tz = encodeURIComponent(currentCity.timezone || "auto");
+  return `https://archive-api.open-meteo.com/v1/archive?latitude=${Number(currentCity.latitude).toFixed(4)}&longitude=${Number(currentCity.longitude).toFixed(4)}&start_date=${ys[0]}-01-01&end_date=${ys[ys.length-1]}-12-31&daily=${encodeURIComponent(dailyVars)}&timezone=${tz}`;
+}
+
+function geocodeUrl(query){
+  return `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=20&language=en&format=json`;
+}
+
+function showApiUrl(url, label="Weather API URL"){
+  const el=$("apiUrl");
+  el.style.display="block";
+  el.textContent=`${label}：${url}`;
+}
+
+function initControls(){
+  DATA_YEARS.forEach(y=>{
+    const a=document.createElement("option"); a.value=y; a.textContent=y; $("startYearSelect").appendChild(a);
+    const b=document.createElement("option"); b.value=y; b.textContent=y; $("endYearSelect").appendChild(b);
+    const c=document.createElement("option"); c.value=y; c.textContent=y; $("chartYearSelect").appendChild(c);
+  });
+  $("startYearSelect").value="2016";
+  $("endYearSelect").value="2025";
+  $("chartYearSelect").value="2025";
+
+  ["startDateInput","endDateInput","viewModeSelect","chartYearSelect"].forEach(id=>$(id).addEventListener("change", renderAll));
+
+  ["startYearSelect","endYearSelect"].forEach(id=>$(id).addEventListener("change", ()=>{
+    rebuildChartYearOptions();
+    if(loadWeatherFromCache(false)){
+      setStatus(`已自動使用快取資料：${cityLabel(currentCity)}｜${selectedYearRangeKey().replace("_","–")}。`, "ok");
+      renderAll();
+    }else{
+      rawDaily=null; loadedKey=null; clearRenderedContent();
+      setStatus("年份範圍已變更。請按「載入天氣資料」。", "warn");
+      showApiUrl(apiUrlForCurrentSelection());
+    }
+  }));
+
+  $("useSelectedCityBtn").addEventListener("click", useSelectedCityCandidate);
+  $("loadBtn").addEventListener("click", loadWeather);
+  $("clearBtn").addEventListener("click", clearCache);
+
+  ["countryInput","cityInput"].forEach(id=>{
+    $(id).addEventListener("input", ()=>{
+      if(currentInputKey() !== lastResolvedInputKey){
+        rawDaily=null;
+        loadedKey=null;
+        clearRenderedContent();
+        setStatus("國家或城市已變更。按「載入天氣資料」時會自動重新匹配城市。", "warn");
+      }
+    });
+    $(id).addEventListener("keydown", e=>{
+      if(e.key === "Enter"){
+        e.preventDefault();
+        loadWeather();
+      }
+    });
+  });
+
+  rebuildChartYearOptions();
+  renderResolvedCity();
+  lastResolvedInputKey = currentInputKey();
+  showApiUrl(apiUrlForCurrentSelection());
+}
+function rebuildChartYearOptions(){
+  const current=$("chartYearSelect").value;
+  const ys=selectedYears();
+  $("chartYearSelect").innerHTML="";
+  ys.forEach(y=>{
+    const o=document.createElement("option");
+    o.value=y;
+    o.textContent=y;
+    $("chartYearSelect").appendChild(o);
+  });
+  $("chartYearSelect").value = ys.includes(Number(current)) ? current : String(ys[ys.length-1]);
+}
+
+function getCooldownUntil(key){
+  return Number(localStorage.getItem(key) || 0);
+}
+
+function setCooldown(key, minutes){
+  const until=Date.now()+minutes*60*1000;
+  localStorage.setItem(key, String(until));
+}
+
+function cooldownMessage(key, label){
+  const until=getCooldownUntil(key);
+  if(!until || Date.now()>=until) return "";
+  const sec=Math.ceil((until-Date.now())/1000);
+  const min=Math.ceil(sec/60);
+  return `${label} 目前仍在 429 冷卻時間內，約 ${min} 分鐘後再試。冷卻期間不會送出 request。`;
+}
+
+async function fetchOnce(url, cooldownKey, label){
+  const res=await fetch(url);
+  if(res.status===429){
+    setCooldown(cooldownKey, 10);
+    throw new Error(`${label} error: 429 Too Many Requests。本頁已啟動 10 分鐘本機冷卻，期間不會再送 request。`);
+  }
+  if(!res.ok){
+    throw new Error(`${label} error: ${res.status} ${res.statusText}`);
+  }
+  const json=await res.json();
+  if(json && json.error){
+    throw new Error(json.reason || `${label} 回傳 error=true`);
+  }
+  return json;
+}
+
+function scoreCity(candidate, searchContext){
+  const q = normalizeQuery(searchContext.query).replace(/_/g," ");
+  const n = normalizeQuery(candidate.name).replace(/_/g," ");
+  let score = 0;
+
+  if(n === q) score += 1000000;
+  if(n.startsWith(q)) score += 100000;
+  if(q && n.includes(q)) score += 50000;
+
+  if(searchContext.aliasInfo && searchContext.aliasInfo.preferredCountryCode && candidate.country_code === searchContext.aliasInfo.preferredCountryCode){
+    score += 300000;
+  }
+
+  if(searchContext.countryInfo && searchContext.countryInfo.raw){
+    if(countryMatchesCandidate(candidate, searchContext.countryInfo)){
+      score += 2000000;
+    }else{
+      score -= 1500000;
+    }
+  }
+
+  if(["PPLC","PPLA","PPLA2","PPLA3","PPLA4"].includes(candidate.feature_code)) score += 10000;
+  score += Math.min(Number(candidate.population || 0) / 100, 50000);
+  return score;
+}
+
+function sortCityResults(results, searchContext){
+  return [...results].sort((a,b)=>scoreCity(b, searchContext)-scoreCity(a, searchContext));
+}
+
+async function resolveCityFromInput(options = {}){
+  const countryText = $("countryInput").value.trim();
+  const cityText = $("cityInput").value.trim();
+
+  if(cityText.length < 2){
+    const msg = "請至少輸入 2 個字元的城市名稱。";
+    if(options.silent) throw new Error(msg);
+    setStatus(msg, "warn");
+    return false;
+  }
+
+  const searchContext = resolveCitySearchInput(countryText, cityText);
+  if(!searchContext.query || searchContext.query.length < 2){
+    const msg = "城市名稱無法解析，請重新輸入。例如：國家=韓國，城市=釜山。";
+    if(options.silent) throw new Error(msg);
+    setStatus(msg, "warn");
+    return false;
+  }
+
+  const cd=cooldownMessage(GEOCODE_COOLDOWN_KEY, "城市搜尋");
+  if(cd){
+    if(options.silent) throw new Error(cd);
+    setStatus(cd, "bad");
+    return false;
+  }
+
+  if(!options.silent) $("loadBtn").disabled=true;
+
+  try{
+    let results = null;
+    const cacheKey = geocodeCacheKey(searchContext.query);
+    const cached=localStorage.getItem(cacheKey);
+    if(cached){
+      results=JSON.parse(cached).results || [];
+    }else{
+      const url=geocodeUrl(searchContext.query);
+      showApiUrl(url, "Geocoding API URL");
+      const countryMsg = searchContext.countryInfo.raw ? `，國家條件：「${searchContext.countryInfo.raw}」` : "";
+      if(!options.silent) setStatus(`正在搜尋城市：「${searchContext.query}」${countryMsg}。`, "warn");
+      const json=await fetchOnce(url, GEOCODE_COOLDOWN_KEY, "Geocoding API");
+      results=json.results || [];
+      localStorage.setItem(cacheKey, JSON.stringify({
+        results,
+        savedAt:new Date().toLocaleString("zh-TW",{hour12:false})
+      }));
+      localStorage.removeItem(GEOCODE_COOLDOWN_KEY);
+    }
+
+    if(!results.length){
+      throw new Error(`找不到城市：「${searchContext.query}」。請嘗試輸入英文城市名，並在國家欄輸入國家，例如 國家=South Korea，城市=Busan。`);
+    }
+
+    cityCandidates=sortCityResults(results, searchContext);
+
+    if(searchContext.countryInfo.raw){
+      const matched = cityCandidates.filter(c => countryMatchesCandidate(c, searchContext.countryInfo));
+      if(!matched.length){
+        renderCityCandidateSelect();
+        throw new Error(`有找到城市候選結果，但沒有符合國家條件「${searchContext.countryInfo.raw}」的結果。請確認國家名稱或改用國家代碼，例如 KR、JP、TW、FR。`);
+      }
+    }
+
+    currentCity=cityCandidates[0];
+    renderResolvedCity();
+    renderCityCandidateSelect();
+    lastResolvedInputKey = currentInputKey();
+
+    rawDaily=null;
+    loadedKey=null;
+    clearRenderedContent();
+
+    const countryExplain = searchContext.countryInfo.raw ? `；已套用國家條件：${searchContext.countryInfo.raw}${searchContext.countryInfo.code ? " (" + searchContext.countryInfo.code + ")" : ""}` : "";
+    if(!options.silent) setStatus(`已自動對應為：${cityLabel(currentCity)}${countryExplain}。若不是你要的城市，請從「其他可能結果」改選。接著按「載入天氣資料」。`, "ok");
+    showApiUrl(apiUrlForCurrentSelection());
+
+    if(!options.silent && loadWeatherFromCache(false)){
+      setStatus(`已自動使用快取天氣資料：${cityLabel(currentCity)}｜${selectedYearRangeKey().replace("_","–")}。`, "ok");
+      renderAll();
+    }
+
+    return true;
+  }catch(err){
+    if(options.silent) throw err;
+    setStatus(
+      `城市搜尋失敗：${err.message}\n\n` +
+      `建議：\n` +
+      `1. 國家欄可以輸入：韓國、南韓、Korea、KR。城市欄可以輸入：釜山、Busan。\n` +
+      `2. 若是 429，請等冷卻時間結束再試。\n` +
+      `3. 可改用更明確的組合，例如 國家=South Korea，城市=Busan。`,
+      "bad"
+    );
+    return false;
+  }finally{
+    if(!options.silent) $("loadBtn").disabled=false;
+  }
+}
+
+async function ensureCityResolvedForWeather(){
+  if(currentInputKey() === lastResolvedInputKey && currentCity && currentCity.latitude && currentCity.longitude){
+    return true;
+  }
+  setStatus("正在自動匹配國家與城市，接著會載入天氣資料。", "warn");
+  return await resolveCityFromInput({ silent: true });
+}
+function renderCityCandidateSelect(){
+  const box=$("cityResults");
+  const select=$("cityResultSelect");
+  select.innerHTML="";
+
+  cityCandidates.forEach((c,idx)=>{
+    const o=document.createElement("option");
+    o.value=String(idx);
+    o.textContent=`${cityLabel(c)}｜${c.country_code || "--"}｜${fmt(c.latitude,4)}, ${fmt(c.longitude,4)}｜${c.timezone || "auto"}${c.population ? "｜人口 " + Number(c.population).toLocaleString() : ""}`;
+    select.appendChild(o);
+  });
+
+  box.classList.toggle("show", cityCandidates.length > 1);
+}
+
+function useSelectedCityCandidate(){
+  const idx=Number($("cityResultSelect").value || 0);
+  if(!cityCandidates[idx]) return;
+
+  currentCity=cityCandidates[idx];
+  renderResolvedCity();
+  lastResolvedInputKey = currentInputKey();
+  rawDaily=null;
+  loadedKey=null;
+  clearRenderedContent();
+  setStatus(`已改用：${cityLabel(currentCity)}。接著按「載入天氣資料」。`, "ok");
+  showApiUrl(apiUrlForCurrentSelection());
+
+  if(loadWeatherFromCache(false)){
+    setStatus(`已自動使用快取天氣資料：${cityLabel(currentCity)}｜${selectedYearRangeKey().replace("_","–")}。`, "ok");
+    renderAll();
+  }
+}
+
+function loadWeatherFromCache(showMessage=true){
+  try{
+    const cached=localStorage.getItem(weatherCacheKey());
+    if(!cached) return false;
+    const parsed=JSON.parse(cached);
+    rawDaily=parsed.rawDaily;
+    loadedKey=dataKey();
+    buildRows();
+    if(showMessage) setStatus(`已使用快取資料：${cityLabel(currentCity)}｜${selectedYearRangeKey().replace("_","–")}。快取時間：${parsed.savedAt || "未知"}。`, "ok");
+    return true;
+  }catch(e){
+    localStorage.removeItem(weatherCacheKey());
+    return false;
+  }
+}
+
+function saveWeatherToCache(){
+  localStorage.setItem(weatherCacheKey(), JSON.stringify({
+    city: currentCity,
+    rawDaily,
+    savedAt:new Date().toLocaleString("zh-TW",{hour12:false})
+  }));
+}
+
+function clearCache(){
+  Object.keys(localStorage).forEach(k=>{
+    if(k.startsWith(WEATHER_CACHE_PREFIX) || k.startsWith(GEOCODE_CACHE_PREFIX)) localStorage.removeItem(k);
+  });
+  localStorage.removeItem(WEATHER_COOLDOWN_KEY);
+  localStorage.removeItem(GEOCODE_COOLDOWN_KEY);
+  rawDaily=null; selectedRows=[]; yearSummaries=[]; loadedKey=null; cityCandidates=[];
+  $("cityResults").classList.remove("show");
+  clearRenderedContent();
+  setStatus("已清除本頁所有城市搜尋快取、天氣快取與 429 冷卻時間。", "warn");
+  showApiUrl(apiUrlForCurrentSelection());
+}
+
+function clearRenderedContent(){
+  $("calendarSection").innerHTML="";
+  $("yearSummaryGrid").innerHTML="";
+  $("rainHeatmap").innerHTML="";
+  document.querySelector("#dailyTable tbody").innerHTML="";
+  ["mRange","mRangeSub","mWettest","mWettestSub","mDriest","mDriestSub","mSelectedYear","mSelectedYearSub"].forEach(id=>{ if($(id)) $(id).textContent=id.includes("Sub")?"--":"--"; });
+  ["rainChart","yearCompareChart","tempChart"].forEach(id=>{ const c=$(id), ctx=c.getContext("2d"); ctx.clearRect(0,0,c.width,c.height); });
+}
+
+async function fetchWeather(){
+  const url=apiUrlForCurrentSelection();
+  showApiUrl(url, "Weather API URL");
+  const json=await fetchOnce(url, WEATHER_COOLDOWN_KEY, "Weather API");
+  if(!json.daily || !json.daily.time) throw new Error("Weather API 回傳格式不完整");
+  return json.daily;
+}
+
+async function loadWeather(){
+  $("loadBtn").disabled=true;
+  $("clearBtn").disabled=true;
+
+  try{
+    const cd=cooldownMessage(WEATHER_COOLDOWN_KEY, "天氣資料");
+    if(cd){
+      setStatus(cd, "bad");
+      return;
+    }
+
+    await ensureCityResolvedForWeather();
+
+    if(loadWeatherFromCache(true)){
+      renderAll();
+      return;
+    }
+
+    const ys=selectedYears();
+    setStatus(`正在載入：${cityLabel(currentCity)}｜${ys[0]}–${ys[ys.length-1]} 年資料。此版沒有自動重試，按一次只送出一次 request。`, "warn");
+    rawDaily=await fetchWeather();
+    loadedKey=dataKey();
+    buildRows();
+    saveWeatherToCache();
+    localStorage.removeItem(WEATHER_COOLDOWN_KEY);
+    setStatus(`載入完成：${cityLabel(currentCity)}｜${ys[0]}–${ys[ys.length-1]}。資料已快取，之後改日期區間不會再打 API。`, "ok");
+    renderAll();
+  }catch(err){
+    setStatus(
+      `載入失敗：${err.message}\n\n` +
+      `建議：\n` +
+      `1. 如果是 429，請不要連續按載入；本頁已做本機冷卻保護。\n` +
+      `2. 城市搜尋與天氣資料是兩種 API，兩者都可能被限流。\n` +
+      `3. 成功載入一次後會快取；之後改日期區間不會再打 API。`,
+      "bad"
+    );
+  }finally{
+    $("loadBtn").disabled=false;
+    $("clearBtn").disabled=false;
+  }
+}
+
+function buildRows(){
+  selectedRows=[];
+  yearSummaries=[];
+
+  const startMMDD=mmddFromDateInput("startDateInput");
+  const endMMDD=mmddFromDateInput("endDateInput");
+  if(!startMMDD || !endMMDD || !rawDaily) return;
+
+  const dailyMap={};
+  rawDaily.time.forEach((t,i)=>{
+    dailyMap[t]={
+      iso:t,
+      actualYear:Number(t.slice(0,4)),
+      mmdd:t.slice(5),
+      rain:Number(rawDaily.precipitation_sum[i] || 0),
+      tmax:Number(rawDaily.temperature_2m_max[i]),
+      tmin:Number(rawDaily.temperature_2m_min[i]),
+      code:Number(rawDaily.weather_code[i])
+    };
+  });
+
+  selectedYears().forEach(year=>{
+    const seq=makeMMDDSequenceForYear(startMMDD,endMMDD,year);
+    seq.forEach(item=>{
+      const rec=dailyMap[item.iso];
+      if(!rec) return;
+      const cat=weatherCategory(rec.code);
+      const rainInfo=actualRainInfo(rec.rain);
+      selectedRows.push({
+        baseYear:year,
+        actualYear:rec.actualYear,
+        iso:rec.iso,
+        mmdd:item.mmdd,
+        label:item.label,
+        month:item.month,
+        day:item.day,
+        rain:rec.rain,
+        tmax:rec.tmax,
+        tmin:rec.tmin,
+        weather:cat,
+        risk:rainInfo
+      });
+    });
+  });
+
+  selectedYears().forEach(year=>{
+    const rows=selectedRows.filter(r=>r.baseYear===year);
+    if(!rows.length) return;
+    const totalRain=rows.reduce((a,r)=>a+r.rain,0);
+    const rainDays=rows.filter(r=>r.rain>=1).length;
+    const heavyDays=rows.filter(r=>r.rain>=30).length;
+    const maxRain=Math.max(...rows.map(r=>r.rain));
+    const maxRainRow=rows.find(r=>r.rain===maxRain);
+    const avgMaxTemp=rows.reduce((a,r)=>a+r.tmax,0)/rows.length;
+    const avgMinTemp=rows.reduce((a,r)=>a+r.tmin,0)/rows.length;
+    yearSummaries.push({
+      year,totalRain,rainDays,heavyDays,maxRain,maxRainDate:maxRainRow?.label || "--",
+      avgMaxTemp,avgMinTemp,days:rows.length
+    });
+  });
+}
+
+function selectedChartYear(){
+  return Number($("chartYearSelect").value || selectedYears()[selectedYears().length-1]);
+}
+
+function renderMetrics(){
+  if(!yearSummaries.length) return;
+
+  const wettest=[...yearSummaries].sort((a,b)=>b.totalRain-a.totalRain)[0];
+  const driest=[...yearSummaries].sort((a,b)=>a.totalRain-b.totalRain)[0];
+  const selected=yearSummaries.find(y=>y.year===selectedChartYear()) || yearSummaries[0];
+  const ys=selectedYears();
+  const first=selectedRows[0];
+  const last=selectedRows[selectedRows.length-1];
+
+  $("mRange").textContent=`${first.label}–${last.label}`;
+  $("mRangeSub").textContent=`${cityLabel(currentCity)}｜${ys[0]}–${ys[ys.length-1]}｜逐年實際資料`;
+  $("mWettest").textContent=wettest.year;
+  $("mWettestSub").textContent=`總雨量 ${fmt(wettest.totalRain,1)} mm｜雨日 ${wettest.rainDays}/${wettest.days} 天`;
+  $("mDriest").textContent=driest.year;
+  $("mDriestSub").textContent=`總雨量 ${fmt(driest.totalRain,1)} mm｜雨日 ${driest.rainDays}/${driest.days} 天`;
+  $("mSelectedYear").textContent=selected.year;
+  $("mSelectedYearSub").textContent=`總雨量 ${fmt(selected.totalRain,1)} mm｜最大單日 ${fmt(selected.maxRain,1)} mm (${selected.maxRainDate})`;
+}
+
+function renderYearSummaryGrid(){
+  const grid=$("yearSummaryGrid");
+  grid.innerHTML="";
+  yearSummaries.forEach(s=>{
+    const card=document.createElement("div");
+    card.className="year-card" + (s.year===selectedChartYear() ? " active" : "");
+    card.innerHTML=`
+      <h3>${s.year}</h3>
+      <div class="line">總雨量：<b>${fmt(s.totalRain,1)} mm</b></div>
+      <div class="line">雨日：<b>${s.rainDays}/${s.days} 天</b></div>
+      <div class="line">大雨日：<b>${s.heavyDays} 天</b></div>
+      <div class="line">最大單日：<b>${fmt(s.maxRain,1)} mm</b> (${s.maxRainDate})</div>
+      <div class="line">平均高/低溫：<b>${fmt(s.avgMaxTemp,1)} / ${fmt(s.avgMinTemp,1)} ℃</b></div>
+    `;
+    card.addEventListener("click",()=>{
+      $("chartYearSelect").value=String(s.year);
+      $("viewModeSelect").value="selected";
+      renderAll();
+    });
+    grid.appendChild(card);
+  });
+}
+
+function monthGroupsForYear(year){
+  const groups=[], seen=new Set();
+  selectedRows.filter(r=>r.baseYear===year).forEach(r=>{
+    const key=`${r.actualYear}-${String(r.month).padStart(2,"0")}`;
+    if(!seen.has(key)){
+      seen.add(key);
+      groups.push({key,actualYear:r.actualYear,baseYear:year,month:r.month,label:`${r.actualYear} ${MONTH_NAMES[r.month]}`});
+    }
+  });
+  return groups;
+}
+
+function renderCalendars(){
+  const section=$("calendarSection");
+  section.innerHTML="";
+  const yearsToShow=$("viewModeSelect").value==="all" ? selectedYears() : [selectedChartYear()];
+
+  yearsToShow.forEach(year=>{
+    const block=document.createElement("section");
+    block.className="year-block";
+    block.innerHTML=`
+      <div class="year-block-title">
+        <h2>${year} 實際天氣月曆</h2>
+        <div class="hint">${cityLabel(currentCity)}｜此區是 ${year} 實際歷史資料，不是平均。</div>
+      </div>
+      <div class="calendar-grid" id="year-cal-${year}"></div>
+    `;
+    section.appendChild(block);
+
+    const grid=$(`year-cal-${year}`);
+    monthGroupsForYear(year).forEach(g=>{
+      const card=document.createElement("div");
+      card.className="month-card";
+      card.innerHTML=`
+        <div class="month-head"><h3>${g.label}</h3><div class="month-sub">基準年份：${year}<br>逐日實際資料</div></div>
+        <div class="weekdays">${WEEKDAY_LABELS.map(w=>`<div class="weekday">${w}</div>`).join("")}</div>
+        <div class="calendar" id="cal-${g.baseYear}-${g.key}"></div>`;
+      grid.appendChild(card);
+      renderMonthCalendar(`cal-${g.baseYear}-${g.key}`,g.baseYear,g.actualYear,g.month);
+    });
+  });
+}
+
+function renderMonthCalendar(containerId,baseYear,actualYear,month){
+  const container=$(containerId);
+  container.innerHTML="";
+  let startWeekday=new Date(actualYear,month-1,1).getDay();
+  startWeekday=startWeekday===0?7:startWeekday;
+  const daysInMonth=new Date(actualYear,month,0).getDate();
+  const dataMap={};
+  selectedRows.filter(r=>r.baseYear===baseYear&&r.actualYear===actualYear&&r.month===month).forEach(r=>dataMap[r.day]=r);
+
+  for(let i=1;i<startWeekday;i++){ const c=document.createElement("div"); c.className="day-cell empty"; container.appendChild(c); }
+
+  for(let day=1;day<=daysInMonth;day++){
+    const c=document.createElement("div");
+    const d=dataMap[day];
+    if(d){
+      c.className=`day-cell active ${d.risk.cls}`;
+      c.title=`${d.iso}｜${d.weather}\n雨量 ${fmt(d.rain,1)} mm\n高低溫 ${fmt(d.tmax,1)} / ${fmt(d.tmin,1)} ℃`;
+      c.innerHTML=`
+        <div class="day-top"><div class="day-num">${day}</div><div class="emoji">${weatherEmoji(d.weather)}</div></div>
+        <div class="mini">
+          <div><span class="muted">天氣</span> ${d.weather}</div>
+          <div><span class="muted">雨量</span> ${fmt(d.rain,1)} mm</div>
+          <div><span class="muted">氣溫</span> ${fmt(d.tmax,0)}/${fmt(d.tmin,0)}℃</div>
+          <div class="pill ${d.risk.pill}">${d.risk.short}</div>
+        </div>`;
+      c.addEventListener("click",()=>{
+        const row=document.getElementById(`row-${d.iso}`);
+        if(row){ row.scrollIntoView({behavior:"smooth",block:"center"}); row.style.outline="2px solid rgba(37,99,235,.32)"; setTimeout(()=>row.style.outline="",1500); }
+      });
+    }else{
+      c.className="day-cell empty";
+      c.innerHTML=`<div class="day-top"><div class="day-num">${day}</div></div>`;
+    }
+    container.appendChild(c);
+  }
+
+  const rem=container.children.length%7;
+  if(rem!==0){ for(let i=0;i<7-rem;i++){ const c=document.createElement("div"); c.className="day-cell empty"; container.appendChild(c); } }
+}
+
+function renderHeatmap(){
+  const wrap=$("rainHeatmap");
+  wrap.innerHTML="";
+  const baseYear=selectedYears()[0];
+  const labels=makeMMDDSequenceForYear(mmddFromDateInput("startDateInput"), mmddFromDateInput("endDateInput"), baseYear).map(x=>x.label);
+  const rowsByYear={};
+  selectedYears().forEach(y=>rowsByYear[y]=selectedRows.filter(r=>r.baseYear===y));
+
+  const map=document.createElement("div");
+  map.className="heatmap";
+  map.style.setProperty("--cols", labels.length);
+
+  const head=document.createElement("div");
+  head.className="heat-row";
+  head.innerHTML=`<div class="heat-label"></div>` + labels.map(l=>`<div class="heat-head">${l}</div>`).join("");
+  map.appendChild(head);
+
+  selectedYears().forEach(y=>{
+    const row=document.createElement("div");
+    row.className="heat-row";
+    const cells=rowsByYear[y].map(r=>{
+      const cls=r.risk.cls;
+      const bg=cls==="risk-heavy"?"#fef2f2":cls==="risk-rain"?"#fff7ed":cls==="risk-light"?"#fffbeb":"#ecfdf5";
+      return `<div class="heat-cell" title="${r.iso}｜${fmt(r.rain,1)} mm" style="background:${bg}">${fmt(r.rain,0)}</div>`;
+    }).join("");
+    row.innerHTML=`<div class="heat-label">${y}</div>${cells}`;
+    map.appendChild(row);
+  });
+
+  wrap.appendChild(map);
+}
+
+function setupCanvas(canvas){
+  const dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect();
+  canvas.width=Math.max(860,rect.width*dpr); canvas.height=Math.max(320,rect.height*dpr);
+  const ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w:rect.width,h:rect.height};
+}
+
+function drawAxes(ctx,w,h,maxVal,minVal=0,yLabel=""){
+  const pad={l:58,r:24,t:22,b:58};
+  ctx.clearRect(0,0,w,h); ctx.font="12px Segoe UI, Noto Sans TC, sans-serif"; ctx.strokeStyle="#e6e9f0"; ctx.fillStyle="#667085";
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(h-pad.t-pad.b)*(i/4);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    const val=maxVal-(maxVal-minVal)*(i/4); ctx.fillText(fmt(val,0),8,y+4);
+  }
+  if(yLabel){ ctx.save(); ctx.translate(14,h/2); ctx.rotate(-Math.PI/2); ctx.fillText(yLabel,0,0); ctx.restore(); }
+  return pad;
+}
+
+function drawXLabels(ctx,arr,pad,w,h){
+  const plotW=w-pad.l-pad.r, step=plotW/Math.max(arr.length,1);
+  const every=arr.length>45?5:arr.length>30?4:arr.length>18?3:2;
+  ctx.fillStyle="#667085"; ctx.textAlign="center";
+  arr.forEach((d,i)=>{
+    if(i%every===0 || i===arr.length-1){
+      ctx.save(); ctx.translate(pad.l+i*step+step/2,h-18); ctx.rotate(-Math.PI/5); ctx.fillText(d.label,0,0); ctx.restore();
+    }
+  });
+  ctx.textAlign="start";
+}
+
+function drawRainChart(){
+  const year=selectedChartYear();
+  const rows=selectedRows.filter(r=>r.baseYear===year);
+  $("rainChartHint").textContent=`${cityLabel(currentCity)}｜${year} 實際每日雨量`;
+  const {ctx,w,h}=setupCanvas($("rainChart"));
+  if(!rows.length)return;
+
+  const max=Math.max(...rows.map(r=>r.rain),1)*1.2;
+  const pad=drawAxes(ctx,w,h,max,0,"mm");
+  const plotW=w-pad.l-pad.r, plotH=h-pad.t-pad.b, step=plotW/rows.length, barW=Math.max(2,step*.72);
+
+  rows.forEach((r,i)=>{
+    const x=pad.l+i*step+(step-barW)/2, bh=(r.rain/max)*plotH;
+    ctx.fillStyle=r.risk.cls==="risk-heavy"?"#b91c1c":r.risk.cls==="risk-rain"?"#ea580c":r.risk.cls==="risk-light"?"#f59e0b":"#2563eb";
+    ctx.fillRect(x,pad.t+plotH-bh,barW,bh);
+  });
+  drawXLabels(ctx,rows,pad,w,h);
+}
+
+function drawYearCompareChart(){
+  const {ctx,w,h}=setupCanvas($("yearCompareChart"));
+  if(!yearSummaries.length)return;
+
+  const max=Math.max(...yearSummaries.map(s=>s.totalRain),1)*1.2;
+  const pad=drawAxes(ctx,w,h,max,0,"mm");
+  const plotW=w-pad.l-pad.r, plotH=h-pad.t-pad.b, step=plotW/yearSummaries.length, barW=Math.max(12,step*.45);
+
+  ctx.textAlign="center";
+  yearSummaries.forEach((s,i)=>{
+    const x=pad.l+i*step+(step-barW)/2;
+    const bh=(s.totalRain/max)*plotH;
+    ctx.fillStyle=s.year===selectedChartYear()?"#2563eb":"#94a3b8";
+    ctx.fillRect(x,pad.t+plotH-bh,barW,bh);
+    ctx.fillStyle="#667085";
+    ctx.fillText(String(s.year),x+barW/2,h-18);
+
+    ctx.fillStyle="#475467";
+    ctx.font="11px Segoe UI, Noto Sans TC, sans-serif";
+    ctx.fillText(`${s.rainDays}雨日`,x+barW/2,pad.t+plotH-bh-6);
+    ctx.font="12px Segoe UI, Noto Sans TC, sans-serif";
+  });
+  ctx.textAlign="start";
+}
+
+function drawTempChart(){
+  const year=selectedChartYear();
+  const rows=selectedRows.filter(r=>r.baseYear===year);
+  $("tempChartHint").textContent=`${cityLabel(currentCity)}｜${year} 實際每日高低溫`;
+  const {ctx,w,h}=setupCanvas($("tempChart"));
+  if(!rows.length)return;
+
+  const maxT=Math.max(...rows.map(r=>r.tmax),30)+1.5;
+  const minT=Math.min(...rows.map(r=>r.tmin),15)-1.5;
+  const pad=drawAxes(ctx,w,h,maxT,minT,"℃");
+  const plotW=w-pad.l-pad.r, plotH=h-pad.t-pad.b, step=rows.length>1?plotW/(rows.length-1):0;
+  const yOf=v=>pad.t+(maxT-v)/(maxT-minT)*plotH;
+
+  function line(field,color){
+    ctx.strokeStyle=color; ctx.lineWidth=2.3; ctx.beginPath();
+    rows.forEach((r,i)=>{ const x=pad.l+i*step, y=yOf(r[field]); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+    ctx.stroke(); ctx.fillStyle=color;
+    rows.forEach((r,i)=>{ const x=pad.l+i*step, y=yOf(r[field]); ctx.beginPath(); ctx.arc(x,y,2.8,0,Math.PI*2); ctx.fill(); });
+  }
+  line("tmax","#b91c1c"); line("tmin","#2563eb");
+  ctx.fillStyle="#b91c1c"; ctx.fillText("最高溫",w-90,22);
+  ctx.fillStyle="#2563eb"; ctx.fillText("最低溫",w-90,40);
+  drawXLabels(ctx,rows,pad,w,h);
+}
+
+function renderTable(){
+  const tbody=document.querySelector("#dailyTable tbody");
+  tbody.innerHTML="";
+  selectedRows.forEach(r=>{
+    const tr=document.createElement("tr");
+    tr.id=`row-${r.iso}`;
+    tr.className=r.risk.row;
+    tr.innerHTML=`
+      <td>${r.baseYear}</td>
+      <td>${r.iso}</td>
+      <td>${weatherEmoji(r.weather)} ${r.weather}</td>
+      <td>${fmt(r.rain,1)}</td>
+      <td>${fmt(r.tmax,1)}</td>
+      <td>${fmt(r.tmin,1)}</td>
+      <td>${r.risk.text}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderAll(){
+  if(!rawDaily || !loadedKey){
+    clearRenderedContent();
+    return;
+  }
+
+  if(loadedKey !== dataKey()){
+    if(loadWeatherFromCache(false)){
+      setStatus(`已自動使用快取資料：${cityLabel(currentCity)}｜${selectedYearRangeKey().replace("_","–")}。`, "ok");
+    }else{
+      clearRenderedContent();
+      setStatus("目前城市或年份範圍尚未載入。請按「載入天氣資料」。", "warn");
+      showApiUrl(apiUrlForCurrentSelection());
+      return;
+    }
+  }
+
+  buildRows();
+  if(!selectedRows.length){
+    clearRenderedContent();
+    setStatus("目前選擇條件沒有可顯示的資料，請調整日期區間或年份。", "warn");
+    return;
+  }
+
+  renderMetrics();
+  renderYearSummaryGrid();
+  renderHeatmap();
+  renderCalendars();
+  drawRainChart();
+  drawYearCompareChart();
+  drawTempChart();
+  renderTable();
+}
+
+window.addEventListener("resize",()=>{
+  if(selectedRows.length){
+    drawRainChart();
+    drawYearCompareChart();
+    drawTempChart();
+  }
+});
+
+function redrawChartsAfterLayoutChange(){
+  if(selectedRows && selectedRows.length){
+    drawRainChart();
+    drawYearCompareChart();
+    drawTempChart();
+  }
+}
+
+function initSidebarSummaryToggle(){
+  const shell = document.querySelector("main.app-shell");
+  const panel = document.getElementById("operationPanel");
+  const summary = document.getElementById("operationSummary");
+  if(!shell || !panel || !summary) return;
+
+  const storageKey = "world_city_weather_sidebar_collapsed";
+
+  function isDesktopDrawer(){
+    return window.matchMedia("(min-width: 1181px)").matches;
+  }
+
+  function applySidebarState(collapsed, persist=true){
+    shell.classList.toggle("sidebar-collapsed", collapsed);
+    summary.setAttribute("aria-expanded", String(!collapsed));
+
+    if(isDesktopDrawer()){
+      // Keep <details> technically open so the summary stays controllable;
+      // CSS hides the content when the sidebar is collapsed.
+      panel.open = true;
+    }else{
+      panel.open = true;
+      shell.classList.remove("sidebar-collapsed");
+      collapsed = false;
+    }
+
+    if(persist){
+      localStorage.setItem(storageKey, collapsed ? "1" : "0");
+    }
+
+    window.setTimeout(redrawChartsAfterLayoutChange, 260);
+  }
+
+  summary.addEventListener("click", (event) => {
+    if(!isDesktopDrawer()){
+      return;
+    }
+
+    event.preventDefault();
+    applySidebarState(!shell.classList.contains("sidebar-collapsed"));
+  });
+
+  window.addEventListener("resize", () => {
+    const shouldCollapse = localStorage.getItem(storageKey) === "1";
+    applySidebarState(shouldCollapse && isDesktopDrawer(), false);
+  });
+
+  applySidebarState(localStorage.getItem(storageKey) === "1" && isDesktopDrawer(), false);
+}
+
+initSidebarSummaryToggle();
+initControls();
+loadWeatherFromCache(true);
+if(rawDaily) renderAll();
+</script>
+</body>
+</html>
