@@ -613,6 +613,7 @@ const COUNTRY_ALIAS_GROUPS = [
   { code:"DE", aliases:["de","germany","德國","德国"] },
   { code:"IT", aliases:["it","italy","義大利","意大利"] },
   { code:"ES", aliases:["es","spain","西班牙"] },
+  { code:"AT", aliases:["at","austria","奧地利","奥地利","österreich"] },
   { code:"CA", aliases:["ca","canada","加拿大"] },
   { code:"AU", aliases:["au","australia","澳洲","澳大利亞","澳大利亚"] },
   { code:"TH", aliases:["th","thailand","泰國","泰国"] },
@@ -660,6 +661,7 @@ const CITY_ALIAS_MAP = (() => {
   add("JP", ["大阪","おおさか"], "Osaka");
   add("JP", ["福岡","福冈","ふくおか"], "Fukuoka");
   add("JP", ["札幌","さっぽろ"], "Sapporo");
+  add("AT", ["維也納","维也纳","wien"], "Vienna");
   add("TW", ["台北","臺北","台北市","臺北市"], "Taipei");
   add("TW", ["高雄","高雄市"], "Kaohsiung");
   add("TW", ["台中","臺中","台中市","臺中市"], "Taichung");
@@ -667,77 +669,84 @@ const CITY_ALIAS_MAP = (() => {
   return map;
 })();
 
-function lookupCountryCode(rawCountry){
-  const raw = String(rawCountry || "").trim();
-  if(!raw) return "";
-  if(/^[a-zA-Z]{2}$/.test(raw)) return raw.toUpperCase();
-  return COUNTRY_ALIAS_MAP[normalizeQuery(raw)] || "";
-}
-
-function countryInfoFromInput(rawCountry){
-  const raw = String(rawCountry || "").trim();
-  return {
-    raw,
-    code: lookupCountryCode(raw),
-    normalized: normalizeQuery(raw)
-  };
-}
-
-function escapeRegExp(text){
-  return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractCountryFromCombinedCityInput(rawCity){
-  let city = String(rawCity || "").trim();
-  let info = countryInfoFromInput("");
-  const normalized = normalizeQuery(city);
-  for(const entry of COUNTRY_ALIAS_LIST){
-    if(!entry.normalized) continue;
-    if(normalized === entry.normalized || normalized.startsWith(entry.normalized + "_") || normalized.endsWith("_" + entry.normalized) || normalized.includes(entry.normalized)){
-      info = { raw: entry.alias, code: entry.code, normalized: entry.normalized };
-      const pattern = new RegExp(escapeRegExp(entry.alias), "ig");
-      city = city.replace(pattern, " ").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
-      break;
-    }
-  }
-  return { city, countryInfo: info };
-}
-
-function resolveCitySearchInput(rawCountry, rawCity){
-  let countryInfo = countryInfoFromInput(rawCountry);
-  let city = String(rawCity || "").trim();
-
-  if(!countryInfo.raw && city){
-    const extracted = extractCountryFromCombinedCityInput(city);
-    if(extracted.countryInfo.code){
-      countryInfo = extracted.countryInfo;
-      city = extracted.city;
-    }
+const LocationResolver = (() => {
+  function lookupCountryCode(rawCountry){
+    const raw = String(rawCountry || "").trim();
+    if(!raw) return "";
+    if(/^[a-zA-Z]{2}$/.test(raw)) return raw.toUpperCase();
+    return COUNTRY_ALIAS_MAP[normalizeQuery(raw)] || "";
   }
 
-  const cityAlias = CITY_ALIAS_MAP[normalizeQuery(city)];
-  const query = cityAlias ? cityAlias.query : city;
+  function countryInfoFromInput(rawCountry){
+    const raw = String(rawCountry || "").trim();
+    return {
+      raw,
+      code: lookupCountryCode(raw),
+      normalized: normalizeQuery(raw)
+    };
+  }
+
+  function escapeRegExp(text){
+    return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function extractCountryFromCombinedCityInput(rawCity){
+    let city = String(rawCity || "").trim();
+    let info = countryInfoFromInput("");
+    const normalized = normalizeQuery(city);
+    for(const entry of COUNTRY_ALIAS_LIST){
+      if(!entry.normalized) continue;
+      if(normalized === entry.normalized || normalized.startsWith(entry.normalized + "_") || normalized.endsWith("_" + entry.normalized) || normalized.includes(entry.normalized)){
+        info = { raw: entry.alias, code: entry.code, normalized: entry.normalized };
+        const pattern = new RegExp(escapeRegExp(entry.alias), "ig");
+        city = city.replace(pattern, " ").replace(/[，,]/g, " ").replace(/\s+/g, " ").trim();
+        break;
+      }
+    }
+    return { city, countryInfo: info };
+  }
+
+  function resolveCitySearchInput(rawCountry, rawCity){
+    let countryInfo = countryInfoFromInput(rawCountry);
+    let city = String(rawCity || "").trim();
+
+    if(!countryInfo.raw && city){
+      const extracted = extractCountryFromCombinedCityInput(city);
+      if(extracted.countryInfo.code){
+        countryInfo = extracted.countryInfo;
+        city = extracted.city;
+      }
+    }
+
+    const cityAlias = CITY_ALIAS_MAP[normalizeQuery(city)];
+    const query = cityAlias ? cityAlias.query : city;
+
+    return {
+      originalCity: rawCity,
+      cleanedCity: city,
+      query,
+      countryInfo,
+      aliasInfo: cityAlias || {}
+    };
+  }
+
+  function countryMatchesCandidate(candidate, countryInfo){
+    if(!countryInfo || !countryInfo.raw) return true;
+    if(countryInfo.code && String(candidate.country_code || "").toUpperCase() === countryInfo.code) return true;
+
+    const target = countryInfo.normalized;
+    if(!target) return true;
+
+    const country = normalizeQuery(candidate.country || "");
+    const admin1 = normalizeQuery(candidate.admin1 || "");
+    return country === target || country.includes(target) || target.includes(country) || admin1 === target || admin1.includes(target);
+  }
 
   return {
-    originalCity: rawCity,
-    cleanedCity: city,
-    query,
-    countryInfo,
-    aliasInfo: cityAlias || {}
+    resolveCitySearchInput,
+    countryMatchesCandidate
   };
-}
-
-function countryMatchesCandidate(candidate, countryInfo){
-  if(!countryInfo || !countryInfo.raw) return true;
-  if(countryInfo.code && String(candidate.country_code || "").toUpperCase() === countryInfo.code) return true;
-
-  const target = countryInfo.normalized;
-  if(!target) return true;
-
-  const country = normalizeQuery(candidate.country || "");
-  const admin1 = normalizeQuery(candidate.admin1 || "");
-  return country === target || country.includes(target) || target.includes(country) || admin1 === target || admin1.includes(target);
-}
+})();
 
 function cityLabel(city){
   const parts = [city.name, city.admin1, city.country].filter(Boolean);
@@ -909,7 +918,7 @@ function scoreCity(candidate, searchContext){
   }
 
   if(searchContext.countryInfo && searchContext.countryInfo.raw){
-    if(countryMatchesCandidate(candidate, searchContext.countryInfo)){
+    if(LocationResolver.countryMatchesCandidate(candidate, searchContext.countryInfo)){
       score += 2000000;
     }else{
       score -= 1500000;
@@ -936,7 +945,7 @@ async function resolveCityFromInput(options = {}){
     return false;
   }
 
-  const searchContext = resolveCitySearchInput(countryText, cityText);
+  const searchContext = LocationResolver.resolveCitySearchInput(countryText, cityText);
   if(!searchContext.query || searchContext.query.length < 2){
     const msg = "城市名稱無法解析，請重新輸入。例如：國家=韓國，城市=釜山。";
     if(options.silent) throw new Error(msg);
@@ -980,7 +989,7 @@ async function resolveCityFromInput(options = {}){
     cityCandidates=sortCityResults(results, searchContext);
 
     if(searchContext.countryInfo.raw){
-      const matched = cityCandidates.filter(c => countryMatchesCandidate(c, searchContext.countryInfo));
+      const matched = cityCandidates.filter(c => LocationResolver.countryMatchesCandidate(c, searchContext.countryInfo));
       if(!matched.length){
         renderCityCandidateSelect();
         throw new Error(`有找到城市候選結果，但沒有符合國家條件「${searchContext.countryInfo.raw}」的結果。請確認國家名稱或改用國家代碼，例如 KR、JP、TW、FR。`);
